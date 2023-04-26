@@ -1,184 +1,213 @@
-from itertools import tee
+import os
+import sys
+import math
 
-import numpy as np
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
+                "/../../Search_based_Planning/")
 
-from utils import State, ARAStar_State
+import plotting, env
 
 
-def _pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
-    a, b = tee(iterable)
-    next(b, None)
-    return zip(a, b)
+class AraStar:
+    def __init__(self, s_start, s_goal, e, heuristic_type):
+        self.s_start, self.s_goal = s_start, s_goal
+        self.heuristic_type = heuristic_type
 
-class ARAStar_Planner:
-    """The ARA* planner with needed utilities, along with some additional
-    utilities for serializing the state of the algorithm for visualization
-    and testing purposes.
-    Attributes
-    ----------
-    graph : np.ndarray, (n x m)
-        the graph being searched through, see __init__ for format requirements.
-    start, goal : State
-        start and goal states in the graph
-    epsilon : float
-        inflation factor for the heuristic function
-    stepsize : float
-        amount to decrease epsilon by each iteration of ARA*
-    g : dict[State, float]
-        dict of costs from the start State to a given State within the graph
-    OPEN : dict[State: float]
-        dict of locally inconsistent States to respective fvalues, used as
-        a priority queue for ARA* search
-    CLOSED : set[State]
-        set of States which have been expanded
-    INCONS : set[State]
-        set of locally inconsistent States which have been previously expanded
-    PARENTS : dict[State, State]
-        dict mapping each expanded State to its predecessor State in the graph
-    alg_history : dict[float, List[ARAStar_State]]
-        dict mapping an epsilon value to a list of ARAStar_State objects,
-        which recreate the state of the algoritm as it progressed through
-        its search.
-    paths_found : dict[float, List[State]]
-        dict mapping epsilon values to the final paths returned for that
-        epsilon. Path is represented as a list of States, start to goal.
-    """
-    def __init__(self, graph: np.ndarray, start: State,
-                 goal: State, epsilon: float = 3.0,
-                 stepsize: float = 0.4) -> None:
-        '''
-        Parameters
-        ----------
-            graph : np.ndarray
-                NumPy array representing the graph to search through. Should
-                comprise of only 0s and 1s, with 0s representing free space
-                and 1s representing obstacles.
-            start, goal : State
-                start and goal states for the search.
-            epsilon : float
-                initial inflation factor for the heuristic function
-            stepsize : float
-                amount to decrease epsilon by each iteration of ARA*
-        '''
-        self.graph = graph
-        self.start = start
-        self.goal = goal
-        self.epsilon = epsilon
-        self.stepsize = stepsize
+        self.Env = env.Env()                                                # class Env
 
-        self.g = {}
-        self.OPEN = {}
-        self.CLOSED = set()
-        self.INCONS = set()
-        self.PARENTS = {}
+        self.u_set = self.Env.motions                                       # feasible input set
+        self.obs = self.Env.obs                                             # position of obstacles
+        self.e = e                                                          # weight
 
-        self.alg_history = {}
-        self.paths_found = {}
+        self.g = dict()                                                     # Cost to come
+        self.OPEN = dict()                                                  # priority queue / OPEN set
+        self.CLOSED = set()                                                 # CLOSED set
+        self.INCONS = {}                                                    # INCONSISTENT set
+        self.PARENT = dict()                                                # relations
+        self.path = []                                                      # planning path
+        self.visited = []                                                   # order of visited nodes
 
-    def h(self, state: State) -> int:
-        """Euclidean heuristic between goal and state."""
-        return np.hypot(self.goal.x - state.x, self.goal.y - state.y)
-        # return max(abs(state.x - self.goal.x), abs(state.y - self.goal.y))
+    def init(self):
+        """
+        initialize each set.
+        """
 
-    def f(self, state: State) -> float:
-        """Combined inflated heuristic."""
-        return self.g[state] + self.epsilon * self.h(state)
+        self.g[self.s_start] = 0.0
+        self.g[self.s_goal] = math.inf
+        self.OPEN[self.s_start] = self.f_value(self.s_start)
+        self.PARENT[self.s_start] = self.s_start
 
-    def is_clear(self, state: State) -> bool:
-        """Returns True if given state does not collide with an obstacle in the graph,
-        False otherwise."""
-        return self.graph[state] == 0
+    def searching(self):
+        self.init()
+        self.ImprovePath()
+        self.path.append(self.extract_path())
 
-    def is_obstacle(self, state: State):
-        """Returns True if given state collides with an obstacle in the graph,
-        False otherwise."""
-        return self.graph[state] != 0
+        while self.update_e() > 1:                                          # continue condition
+            self.e -= 0.4                                                   # increase weight
+            self.OPEN.update(self.INCONS)
+            self.OPEN = {s: self.f_value(s) for s in self.OPEN}             # update f_value of OPEN set
 
-    def valid_state(self, state: State) -> bool:
-        """Returns True if given state is within bounds of graph and does not
-        collide with an obstacle, False otherwise."""
-        x, y = state
-        x_bound, y_bound = self.graph.shape
-        return 0 <= x < x_bound and 0 <= y < y_bound and self.is_clear(state)
+            self.INCONS = dict()
+            self.CLOSED = set()
+            self.ImprovePath()                                              # improve path
+            self.path.append(self.extract_path())
 
-    def neighbors(self, state: State) -> list[State]:
-        """Returns list of neighbors of the given state which are within the bounds
-        of the 8-connected graph and which do not collide with obstacles."""
-        x, y = state
-        n = [
-            (x - 1, y - 1), (x - 1, y), (x - 1, y + 1),
-            (x, y - 1), (x, y + 1),
-            (x + 1, y - 1), (x + 1, y), (x + 1, y + 1),
-        ]
-        return [State(*s) for s in n if self.valid_state(s)]
+        return self.path, self.visited
 
-    def cost(self, state1: State, state2: State) -> float:
-        """Cost of traversal between two states. Infinite if states are not
-        neighbors, else Euclidean distance."""
-        if state2 not in self.neighbors(state1):
-            return np.inf
+    def ImprovePath(self):
+        """
+        :return: a e'-suboptimal path
+        """
 
-        return np.hypot(state2.x - state1.x, state2.y - state1.y)
+        visited_each = []
 
-    def get_next_state(self) -> State:
-        """Returns the state from OPEN with the lowest f value, which should
-        be expanded next, or None if OPEN is empty."""
-        if not self.OPEN:
-            return None
-
-        lowest_f = min(self.OPEN.values())
-        next_states = {state for state, f in self.OPEN.items() if f == lowest_f}
-        return min(next_states)  # breaks ties between states
-
-    def extract_path(self, final_state: State = None) -> list[State]:
-        """From PARENTS mapping, returns path to final_state as a list
-        of States. If final_state is None, defaults to goal state."""
-        if final_state is None:
-            final_state = self.goal
-
-        if final_state not in self.PARENTS:  # path not found yet
-            return None
-
-        s = final_state  # rename within loop
-        path = [s]
         while True:
-            s = self.PARENTS[s]
-            path.append(s)
+            s, f_small = self.calc_smallest_f()
 
-            if s == self.start:
+            if self.f_value(self.s_goal) <= f_small:
                 break
 
-        path.reverse()
-        return path
+            self.OPEN.pop(s)
+            self.CLOSED.add(s)
 
-    def publish_path(self):
-        """Saves current value of epsilon and current path to set of paths found."""
-        self.paths_found[self.epsilon] = self.extract_path()
+            for s_n in self.get_neighbor(s):
+                if s_n in self.obs:
+                    continue
 
-    def save_alg_state(self, current_state: State):
-        """Saves current path and values of OPEN, CLOSED, and INCONS states
-        to alg history for use in testing and plotting."""
-        hist = self.alg_history.setdefault(self.epsilon, [])
-        hist.append(ARAStar_State(
-                self.OPEN.copy(),
-                self.CLOSED.copy(),
-                self.INCONS.copy(),
-                self.extract_path(current_state)
-            ))
+                new_cost = self.g[s] + self.cost(s, s_n)
 
-    def path_cost(self, epsilon: float) -> float:
-        """Calculates the total cost for the path found using the given
-        epsilon value. If no path exists for this epsilon, returns 0."""
-        path = self.paths_found.get(epsilon)
-        if not path:
-            return 0
+                if s_n not in self.g or new_cost < self.g[s_n]:
+                    self.g[s_n] = new_cost
+                    self.PARENT[s_n] = s
+                    visited_each.append(s_n)
 
-        cost = 0
-        for s1, s2 in _pairwise(path):
-            cost += self.cost(s1, s2)
-        return cost
+                    if s_n not in self.CLOSED:
+                        self.OPEN[s_n] = self.f_value(s_n)
+                    else:
+                        self.INCONS[s_n] = 0.0
 
-    def all_path_costs(self) -> dict[float: float]:
-        """Returns path costs for all found paths."""
-        return {eps: self.path_cost(eps) for eps in self.paths_found}
+        self.visited.append(visited_each)
+
+    def calc_smallest_f(self):
+        """
+        :return: node with smallest f_value in OPEN set.
+        """
+
+        s_small = min(self.OPEN, key=self.OPEN.get)
+
+        return s_small, self.OPEN[s_small]
+
+    def get_neighbor(self, s):
+        """
+        find neighbors of state s that not in obstacles.
+        :param s: state
+        :return: neighbors
+        """
+
+        return {(s[0] + u[0], s[1] + u[1]) for u in self.u_set}
+
+    def update_e(self):
+        v = float("inf")
+
+        if self.OPEN:
+            v = min(self.g[s] + self.h(s) for s in self.OPEN)
+        if self.INCONS:
+            v = min(v, min(self.g[s] + self.h(s) for s in self.INCONS))
+
+        return min(self.e, self.g[self.s_goal] / v)
+
+    def f_value(self, x):
+        """
+        f = g + e * h
+        f = cost-to-come + weight * cost-to-go
+        :param x: current state
+        :return: f_value
+        """
+
+        return self.g[x] + self.e * self.h(x)
+
+    def extract_path(self):
+        """
+        Extract the path based on the PARENT set.
+        :return: The planning path
+        """
+
+        path = [self.s_goal]
+        s = self.s_goal
+
+        while True:
+            s = self.PARENT[s]
+            path.append(s)
+
+            if s == self.s_start:
+                break
+
+        return list(path)
+
+    def h(self, s):
+        """
+        Calculate heuristic.
+        :param s: current node (state)
+        :return: heuristic function value
+        """
+
+        heuristic_type = self.heuristic_type                                # heuristic type
+        goal = self.s_goal                                                  # goal node
+
+        if heuristic_type == "manhattan":
+            return abs(goal[0] - s[0]) + abs(goal[1] - s[1])
+        else:
+            return math.hypot(goal[0] - s[0], goal[1] - s[1])
+
+    def cost(self, s_start, s_goal):
+        """
+        Calculate Cost for this motion
+        :param s_start: starting node
+        :param s_goal: end node
+        :return:  Cost for this motion
+        :note: Cost function could be more complicate!
+        """
+
+        if self.is_collision(s_start, s_goal):
+            return math.inf
+
+        return math.hypot(s_goal[0] - s_start[0], s_goal[1] - s_start[1])
+
+    def is_collision(self, s_start, s_end):
+        """
+        check if the line segment (s_start, s_end) is collision.
+        :param s_start: start node
+        :param s_end: end node
+        :return: True: is collision / False: not collision
+        """
+
+        if s_start in self.obs or s_end in self.obs:
+            return True
+
+        if s_start[0] != s_end[0] and s_start[1] != s_end[1]:
+            if s_end[0] - s_start[0] == s_start[1] - s_end[1]:
+                s1 = (min(s_start[0], s_end[0]), min(s_start[1], s_end[1]))
+                s2 = (max(s_start[0], s_end[0]), max(s_start[1], s_end[1]))
+            else:
+                s1 = (min(s_start[0], s_end[0]), max(s_start[1], s_end[1]))
+                s2 = (max(s_start[0], s_end[0]), min(s_start[1], s_end[1]))
+
+            if s1 in self.obs or s2 in self.obs:
+                return True
+
+        return False
+
+
+def main():
+    s_start = (5, 5)
+    s_goal = (45, 25)
+
+    arastar = AraStar(s_start, s_goal, 2.5, "euclidean")
+    plot = plotting.Plotting(s_start, s_goal)
+
+    path, visited = arastar.searching()
+    plot.animation_ara_star(path, visited, "Anytime Repairing A* (ARA*)")
+
+
+if __name__ == '__main__':
+    main()

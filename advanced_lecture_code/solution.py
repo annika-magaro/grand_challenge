@@ -1,10 +1,10 @@
 # %matplotlib widget
 
 import numpy as np
-from utils import (State, ARAStar_Plotter,
+from advanced_lecture_code.utils import (State, ARAStar_Plotter,
                    GRAPH_LARGE, GRAPH_SMALL)
 
-from ara_star import ARAStar_Planner
+from advanced_lecture_code.ara_star import ARAStar_Planner
 
 def initialize(planner: ARAStar_Planner):
     planner.g[planner.goal] = np.inf
