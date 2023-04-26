@@ -51,6 +51,17 @@ class Plotting:
 
         plt.show()
 
+    def animation_lpara_star(self, path, visited, name):
+        self.plot_grid(name)
+        cl_v, cl_p = self.color_list()
+
+        for k in range(len(path)):
+            self.plot_visited(visited[k], cl_v[k])
+            self.plot_path(path[k], cl_p[k], True)
+            plt.pause(0.5)
+
+        plt.show()
+
     def animation_bi_astar(self, path, v_fore, v_back, name):
         self.plot_grid(name)
         self.plot_visited_bi(v_fore, v_back)
