@@ -28,6 +28,16 @@ class LparaStar:
         self.path = []                                                      # planning path
         self.visited = []                                                   # order of visited nodes
 
+        self.rhs, self.U = {}, {}
+
+        for i in range(self.Env.x_range):
+            for j in range(self.Env.y_range):
+                self.rhs[(i, j)] = float("inf")
+                self.g[(i, j)] = float("inf")
+
+        self.rhs[self.s_start] = 0
+        self.U[self.s_start] = self.CalculateKey(self.s_start)
+
     def init(self):
         """
         initialize each set.
@@ -89,6 +99,11 @@ class LparaStar:
 
         self.visited.append(visited_each)
 
+    def CalculateKey(self, s):
+
+        return [min(self.g[s], self.rhs[s]) + self.e * self.h(s), # added epsilon
+                min(self.g[s], self.rhs[s])]
+
     def calc_smallest_f(self):
         """
         :return: node with smallest f_value in OPEN set.
@@ -125,7 +140,7 @@ class LparaStar:
         :return: f_value
         """
 
-        return self.g[x] + self.e * self.h(x)
+        return self.g[x] + self.e * self.h(x) # could maybe replace with CalculateKey
 
     def extract_path(self):
         """
