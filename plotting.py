@@ -56,6 +56,7 @@ class Plotting:
         cl_v, cl_p = self.color_list()
 
         for k in range(len(path)):
+            # TODO: replot env here 
             self.plot_visited(visited[k], cl_v[k])
             self.plot_path(path[k], cl_p[k], True)
             plt.pause(0.5)

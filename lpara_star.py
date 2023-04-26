@@ -2,6 +2,7 @@ import os
 import sys
 import math
 import matplotlib.pyplot as plt
+import random
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
                 "/../../Search_based_Planning/")
@@ -10,23 +11,29 @@ import plotting, env
 
 
 class LparaStar:
-    def __init__(self, s_start, s_goal, e, heuristic_type):
+    def __init__(self, s_start, s_goal, e, heuristic_type, env_changes):
         self.s_start, self.s_goal = s_start, s_goal
         self.heuristic_type = heuristic_type
 
-        self.Env = env.Env()   
+        self.Env = env.Env() 
+        self.Plot = plotting.Plotting(self.s_start, self.s_goal)  
 
         self.u_set = self.Env.motions                                       # feasible input set
         self.obs = self.Env.obs                                             # position of obstacles
-        self.e = e                                                          # weight
+        self.init_e = e                                                     # initial weight
+        self.e = e                                                          # weight (decremented in algorit)
 
         self.g = dict()                                                     # Cost to come
         self.OPEN = dict()                                                  # priority queue / OPEN set
         self.CLOSED = set()                                                 # CLOSED set
         self.INCONS = {}                                                    # INCONSISTENT set
         self.PARENT = dict()                                                # relations
-        self.path = []                                                      # planning path
-        self.visited = []                                                   # order of visited nodes
+        self.path = []      
+        # TODO: make copy of env
+        self.env_change_history = [self.Env.obs]
+        self.visited = [] 
+        self.count = 0
+        self.env_changes = env_changes                                                 # order of visited nodes
 
         self.rhs, self.U = {}, {}
 
@@ -36,36 +43,58 @@ class LparaStar:
                 self.g[(i, j)] = float("inf")
 
         self.rhs[self.s_start] = 0
-        self.U[self.s_start] = self.CalculateKey(self.s_start)
 
     def init(self):
         """
         initialize each set.
         """
 
+        # self.Plot.plot_grid("Lifelong Planning Anytime Repairing A*")
+        
         self.g[self.s_start] = 0.0
         self.g[self.s_goal] = math.inf
-        self.OPEN[self.s_start] = self.f_value(self.s_start)
+        self.OPEN[self.s_start] = self.CalculateKey(self.s_start)
         self.PARENT[self.s_start] = self.s_start
 
-    def searching(self):
-        self.init()
-        self.ImprovePath()
+        # self.fig = plt.figure()
+
+    def ImprovePath(self):
+        self.e = self.init_e
+        self.MakeConsistent()
         self.path.append(self.extract_path())
 
-        while self.update_e() > 1:                                          # continue condition
-            self.e -= 0.4                                                   # increase weight
+        while self.update_e() > 1:                                               # continue condition
+            self.e -= 0.4    
             self.OPEN.update(self.INCONS)
-            self.OPEN = {s: self.f_value(s) for s in self.OPEN}             # update f_value of OPEN set
+            self.OPEN = {s: self.CalculateKey(s) for s in self.OPEN}             # update f_value of OPEN set
 
             self.INCONS = dict()
             self.CLOSED = set()
-            self.ImprovePath()                                              # improve path
             self.path.append(self.extract_path())
 
+    def searching(self):
+        self.init()
+        # self.ComputeShortestPath() 
+        self.ImprovePath()
+        self.path.append(self.extract_path())
+        self.plot_path(self.extract_path())
+        iteration = 0
+
+        while iteration < 3:
+            print("NEW ITERATION")   
+            self.ImprovePath()
+            iteration += 1
+            self.plot_path(self.extract_path())
+
+            # change environment here
+            if iteration < len(self.env_changes):
+                self.change_env(*self.env_changes[iteration])
+                self.path.append(self.extract_path())
+
+        plt.show()
         return self.path, self.visited
 
-    def ImprovePath(self):
+    def MakeConsistent(self):
         """
         :return: a e'-suboptimal path
         """
@@ -75,7 +104,8 @@ class LparaStar:
         while True:
             s, f_small = self.calc_smallest_f()
 
-            if self.f_value(self.s_goal) <= f_small:
+            # print("IN MAKE CONSISTENT", self.s_goal, f_small)
+            if self.CalculateKey(self.s_goal) <= f_small:
                 break
 
             self.OPEN.pop(s)
@@ -93,7 +123,7 @@ class LparaStar:
                     visited_each.append(s_n)
 
                     if s_n not in self.CLOSED:
-                        self.OPEN[s_n] = self.f_value(s_n)
+                        self.OPEN[s_n] = self.CalculateKey(s_n)
                     else:
                         self.INCONS[s_n] = 0.0
 
@@ -108,7 +138,7 @@ class LparaStar:
         """
         :return: node with smallest f_value in OPEN set.
         """
-
+        # print("IN CALC SMALLEST", self.OPEN)
         s_small = min(self.OPEN, key=self.OPEN.get)
 
         return s_small, self.OPEN[s_small]
@@ -212,6 +242,57 @@ class LparaStar:
                 return True
 
         return False
+    
+    def UpdateVertex(self, s):
+        """
+        update the status and the current cost to come of state s.
+        :param s: state s
+        """
+
+        if s != self.s_start:
+
+            # Condition: cost of parent of s changed
+            # Since we do not record the children of a state, we need to enumerate its neighbors
+            self.rhs[s] = min(self.g[s_n] + self.cost(s_n, s)
+                              for s_n in self.get_neighbor(s))
+
+        if s in self.OPEN:
+            self.OPEN.pop(s)
+
+        if self.g[s] != self.rhs[s]:
+
+            # Condition: current cost to come is different to that of last time
+            # state s should be added into OPEN set (set U)
+            self.OPEN[s] = self.CalculateKey(s)
+
+    
+    def change_env(self, x, y):
+        x, y = int(x), int(y)
+        print("Change position: s =", x, ",", "y =", y)
+
+        # self.visited = []
+        self.count += 1
+
+        if (x, y) not in self.obs:
+            self.obs.add((x, y))
+        else:
+            self.obs.remove((x, y))
+            self.UpdateVertex((x, y))
+
+        self.env_change_history.append(self.obs)
+        self.Plot.update_obs(self.obs)
+
+        for s_n in self.get_neighbor((x, y)):
+            self.UpdateVertex(s_n)
+
+        self.MakeConsistent()
+        plt.cla()
+        self.Plot.plot_grid("Lifelong Planning Anytime Repairing A*")
+        # self.Plot.plot_visited(self.visited)
+        print(self.extract_path())
+        self.plot_path(self.extract_path())
+        self.fig.canvas.draw_idle()
+        
 
     def on_press(self, event):
         x, y = event.xdata, event.ydata
@@ -221,7 +302,7 @@ class LparaStar:
             x, y = int(x), int(y)
             print("Change position: s =", x, ",", "y =", y)
 
-            self.visited = set()
+            self.visited = []
             self.count += 1
 
             if (x, y) not in self.obs:
@@ -235,7 +316,7 @@ class LparaStar:
             for s_n in self.get_neighbor((x, y)):
                 self.UpdateVertex(s_n)
 
-            self.ComputeShortestPath()
+            self.MakeConsistent()
 
             plt.cla()
             self.Plot.plot_grid("Lifelong Planning A*")
@@ -243,17 +324,35 @@ class LparaStar:
             self.plot_path(self.extract_path())
             self.fig.canvas.draw_idle()
 
+    def plot_path(self, path):
+        px = [x[0] for x in path]
+        py = [x[1] for x in path]
+        plt.plot(px, py, linewidth=2)
+        plt.plot(self.s_start[0], self.s_start[1], "bs")
+        plt.plot(self.s_goal[0], self.s_goal[1], "gs")
+
+    def plot_visited(self, visited):
+        color = ['gainsboro', 'lightgray', 'silver', 'darkgray',
+                 'bisque', 'navajowhite', 'moccasin', 'wheat',
+                 'powderblue', 'skyblue', 'lightskyblue', 'cornflowerblue']
+
+        if self.count >= len(color) - 1:
+            self.count = 0
+
+        for x in visited:
+            plt.plot(x[0], x[1], marker='s', color=color[self.count])
+
 
 def main():
     s_start = (5, 5)
     s_goal = (45, 25)
 
-    lparastar = LparaStar(s_start, s_goal, 2.5, "euclidean")
+    lparastar = LparaStar(s_start, s_goal, 2.5, "euclidean", [(6, 6), (8, 14), (44, 22), (34, 6), (3, 3)])
     plot = plotting.Plotting(s_start, s_goal)
 
     path, visited = lparastar.searching()
-    plot.animation_lpara_star(path, visited, "Lifelong Planning Anytime Repairing A* (LPARA*)")
-
+    # print(visited)
+    plot.animation_lpara_star(path, visited, lparastar.env_change_history, "Lifelong Planning Anytime Repairing A* (LPARA*)")
 
 if __name__ == '__main__':
     main()
