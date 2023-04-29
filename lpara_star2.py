@@ -18,12 +18,12 @@ class LparaStar2:
         self.Env = Env()  
         self.x = self.Env.x_range
         self.y = self.Env.y_range
-        self.Plot = Plotting(self.s_start, self.s_goal)  
-        self.fig = plt.figure()                                           
-
         self.u_set = self.Env.motions                                       # feasible input set
         self.obs = self.Env.obs                                             # position of obstacles
-        self.e = e                                                          # weight
+        self.e = e
+
+        self.Plot = Plotting(self.s_start, self.s_goal)  
+        self.fig = plt.figure()                                                                                                     # weight
 
         self.colors_visited = Plotting.colors_visited()
         self.colors_path = Plotting.colors_path()
@@ -47,9 +47,9 @@ class LparaStar2:
 
     def plot_progress(self):
         k = len(self.visited) - 1
-        self.Plot.plot_visited(self.visited[k], self.colors_visited[k])
-        self.Plot.plot_path(self.path[k], self.colors_path[k], True)
-        plt.pause(0.5)
+        self.Plot.plot_visited(self.visited[k], self.colors_visited[k % len(self.colors_visited)])
+        self.Plot.plot_path(self.path[k], self.colors_path[k % len(self.colors_path)], True)
+        plt.pause(0.5) # TODO: increase delay to increase time for user updates
 
     def on_press(self, event):
         x, y = event.xdata, event.ydata
@@ -58,6 +58,16 @@ class LparaStar2:
         else:
             x, y = int(x), int(y)
             print("Change position: s =", x, ",", "y =", y)
+
+        if (x, y) not in self.obs:
+            # TODO: make sure that obstacles are reflecting in determined paths
+            self.obs.add((x, y))
+            plt.plot(x, y, "sk")
+        else:
+            self.obs.remove((x, y))
+            plt.plot(x, y, "sw")
+
+        self.Plot.update_obs(self.obs)
 
 
     def searching(self):
@@ -69,7 +79,7 @@ class LparaStar2:
         self.plot_progress()
 
         while self.update_e() > 1:                                          # continue condition
-            self.e -= 0.4                                                   # increase weight
+            self.e -= 0.1 # TODO: interesting to experiment with changing this value                                               # increase weight
             self.OPEN.update(self.INCONS)
             self.OPEN = {s: self.f_value(s) for s in self.OPEN}             # update f_value of OPEN set
 
@@ -85,7 +95,6 @@ class LparaStar2:
         """
         :return: a e'-suboptimal path
         """
-
         visited_each = []
 
         while True:
