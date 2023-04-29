@@ -9,7 +9,6 @@ from plotting import Plotting
 from env import Env
 import matplotlib.pyplot as plt
 
-
 class LparaStar2:
     def __init__(self, s_start, s_goal, e, heuristic_type):
         self.s_start, self.s_goal = s_start, s_goal
@@ -21,6 +20,7 @@ class LparaStar2:
         self.u_set = self.Env.motions                                       # feasible input set
         self.obs = self.Env.obs                                             # position of obstacles
         self.e = e
+        self.new_env_changes = False
 
         self.Plot = Plotting(self.s_start, self.s_goal)  
         self.fig = plt.figure()                                                                                                     # weight
@@ -58,6 +58,7 @@ class LparaStar2:
         else:
             x, y = int(x), int(y)
             print("Change position: s =", x, ",", "y =", y)
+            self.new_env_changes = True
 
         if (x, y) not in self.obs:
             # TODO: make sure that obstacles are reflecting in determined paths
@@ -98,6 +99,12 @@ class LparaStar2:
         visited_each = []
 
         while True:
+            print(self.new_env_changes)
+            if self.new_env_changes:
+                print("NEW ENV CHANGES")
+                # TODO: MAKE EDGES CONSISTENT HERE BY CALLING LPA* ALGO
+                self.new_env_changes = False
+
             s, f_small = self.calc_smallest_f()
 
             if self.f_value(self.s_goal) <= f_small:
