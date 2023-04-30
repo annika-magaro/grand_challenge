@@ -101,6 +101,8 @@ class Plotting:
         count = 0
 
         for x in visited:
+            if x in self.obs:
+                continue
             count += 1
             plt.plot(x[0], x[1], color=cl, marker='o')
             plt.gcf().canvas.mpl_connect('key_release_event',
