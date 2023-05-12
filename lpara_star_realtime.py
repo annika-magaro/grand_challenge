@@ -9,6 +9,12 @@ from plotting import Plotting
 from env import Env
 import matplotlib.pyplot as plt
 
+PARAMETERS = {
+    "e": 2.5, 
+    "connected": 4, 
+    "size": 50,
+    "clump-size": "medium"
+}
 class LparaStar2:
     def __init__(self, s_start, s_goal, e, heuristic_type, connected=8, size=50, coverage=5, clump_size='small'):
         self.s_start, self.s_goal = s_start, s_goal
@@ -411,17 +417,41 @@ class LparaStar2:
 
         return False
 
+# TODO: raise exception if invalid input
+def parse_arguments():
+    if "-e" in sys.argv:
+        i = sys.argv.index("-e")
+        PARAMETERS["e"] = float(sys.argv[i + 1])
+    if "-connected" in sys.argv:
+        i = sys.argv.index("-connected")
+        PARAMETERS["connected"] = int(sys.argv[i + 1])
+    if "-size" in sys.argv:
+        i = sys.argv.index("-size")
+        PARAMETERS["size"] = int(sys.argv[i + 1])
+    if "-clump-size" in sys.argv:
+        i = sys.argv.index("-clump-size")
+        PARAMETERS["clump-size"] = sys.argv[i + 1]
 
 def main():
     s_start = (5, 5)
     s_goal = (45, 45)
 
-    lparastar2 = LparaStar2(s_start, s_goal, 2.5, "euclidean", connected = 4, size = 50, clump_size = 'medium')
-    plot = Plotting(s_start, s_goal, connected = 4, size = 50)
+    args = parse_arguments()
+    lparastar2 = LparaStar2(
+        s_start, 
+        s_goal, 
+        PARAMETERS["e"], 
+        "euclidean", 
+        connected = PARAMETERS["connected"], 
+        size = PARAMETERS["size"], 
+        clump_size = PARAMETERS["clump-size"]
+    )
+
+    plot = Plotting(s_start, s_goal, connected = PARAMETERS["connected"], size = PARAMETERS["size"])
 
     path, visited = lparastar2.searching()
-    # plot.animation_lpara_star2(path, visited, "Anytime Repairing A* (ARA*)")
 
+    print("Arguments: ", sys.argv)
 
 if __name__ == '__main__':
     main()
