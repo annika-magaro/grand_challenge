@@ -10,11 +10,11 @@ from env import Env
 import matplotlib.pyplot as plt
 
 class LparaStar2:
-    def __init__(self, s_start, s_goal, e, heuristic_type):
+    def __init__(self, s_start, s_goal, e, heuristic_type, connected=8, size=50, coverage=5, clump_size='small'):
         self.s_start, self.s_goal = s_start, s_goal
         self.heuristic_type = heuristic_type
 
-        self.Env = Env()  
+        self.Env = Env(connected = connected, size = size, coverage = coverage, clump_size = clump_size)  
         self.x = self.Env.x_range
         self.y = self.Env.y_range
         self.u_set = self.Env.motions                                       # feasible input set
@@ -22,8 +22,9 @@ class LparaStar2:
         self.e = e
         self.new_env_changes = False
         self.s_changed = set()
+        self.connected, self.size, self.coverage, self.clump_size = connected, size, coverage, clump_size
 
-        self.Plot = Plotting(self.s_start, self.s_goal)  
+        self.Plot = Plotting(self.s_start, self.s_goal, self.connected, self.size, self.coverage, self.clump_size)  
         self.fig = plt.figure()                                                                                                     # weight
 
         self.colors_visited = Plotting.colors_visited()
@@ -66,15 +67,24 @@ class LparaStar2:
 
         if (x, y) not in self.obs:
             # TODO: make sure that obstacles are reflecting in determined paths
-            self.obs.add((x, y))
-            self.s_changed.add((x, y))
-            plt.plot(x, y, "sk")
+            for (i, j) in self.get_clump(x, y):
+                self.obs.add((i, j))
+                self.s_changed.add((i, j))
+                plt.plot(i, j, "sk")
         else:
             self.obs.remove((x, y))
             self.s_changed.add((x, y))
             plt.plot(x, y, "sw")
 
         self.Plot.update_obs(self.obs)
+
+    def get_clump(self, x, y):
+        clump_dict = {'small': 0, 'medium': 1, 'large': 2}
+        delta = clump_dict[self.clump_size]
+        for i in range(x - delta, x + delta + 1):
+            for j in range(y - delta, y + delta + 1):
+                if i >= 0 and i < self.x and j >= 0 and j < self.y:
+                    yield (i, j)
 
 
     def searching(self):
@@ -85,7 +95,8 @@ class LparaStar2:
         self.path.append(self.extract_path())
         self.plot_progress()
 
-        while self.update_e() > 1:                                          # continue condition
+        while self.update_e() > 1:  
+        # for i in range(3):                                        # continue condition
             self.e -= 0.1 # TODO: interesting to experiment with changing this value                                               # increase weight
             self.OPEN.update(self.INCONS)
             self.OPEN = {s: self.f_value(s) for s in self.OPEN}             # update f_value of OPEN set
@@ -247,22 +258,105 @@ class LparaStar2:
         :return: The planning path
         """
 
-        path = [self.s_goal]
-        s = self.s_goal
+        # path = [self.s_goal]
+        # s = self.s_goal
+        # print(s)
+        # for k in range(100):
+        #     g_list = {}
+        #     for x in self.get_neighbor(s):
+        #         # TODO: maybe this is a hack? i'm not sure...
+        #         # using calculate key instead of this could fix this perhaps?
+        #         if not self.is_collision(s, x) and x not in path:
+        #             print(x)
+        #             g_list[x] = self.g[x]
+        #     s = min(g_list, key=g_list.get)
+        #     path.append(s)
+        #     if s == self.s_start:
+        #         break
 
-        for k in range(100):
-            g_list = {}
-            for x in self.get_neighbor(s):
-                # TODO: maybe this is a hack? i'm not sure...
-                # using calculate key instead of this could fix this perhaps?
-                if not self.is_collision(s, x) and x not in path:
-                    g_list[x] = self.g[x]
-            s = min(g_list, key=g_list.get)
-            path.append(s)
-            if s == self.s_start:
+        # return list(reversed(path))
+    
+        # path = [self.s_goal]
+        # s = self.s_goal
+        # used = set(s)
+        # print(self.g)
+        # for k in range(100):
+        #     g_list = {}
+        #     for x in self.get_neighbor(s):
+        #         #if not self.is_collision(s, x):
+        #         if x not in used and x[0] >= 0 and x[0] < self.x and x[1] >= 0 and x[1] < self.y:
+        #             g_list[x] = self.g[x]
+        #     s = min(g_list, key=g_list.get)
+        #     if s in path:
+        #         used.add(path[-1])
+        #     path.append(s)
+        #     print(path)
+        #     if s == self.s_start:
+        #         break
+        # print(list(reversed(path)))
+
+        # return list(reversed(path))
+
+        # possible_paths = self.extract_path_better(self.s_goal, [self.s_goal], set([self.s_goal]), self.s_start)
+        # for i in possible_paths:
+        #     if i[-1] == self.s_start:
+        #         return list(reversed(i))
+        # return []
+        parents = self.extract_path_no_recurse()
+        path = []
+        current = self.s_start
+        while current is not None:
+            path.append(current)
+            current = parents[current]
+        return path
+    
+    def extract_path_better(self, goal, current_path, used, start):
+        # go backwards in path but keep track of ties
+        # when there are multiple options, try both paths
+        # at the end, choose the path that ends with s_start
+        g_list = {}
+        for x in self.get_neighbor(goal):
+            if x not in used and x[0] >= 0 and x[0] < self.x and x[1] >= 0 and x[1] < self.y:
+                g_list[x] = self.g[x]
+        if len(g_list) > 0 and len(current_path) < 100:
+            possible_s = []
+            min_val = g_list[min(g_list, key=g_list.get)]
+            if min_val == math.inf:
+                return [current_path]
+            for s in g_list:
+                if g_list[s] == min_val:
+                    possible_s.append(s)
+            if min_val == 0:
+                return [current_path + [end] for end in possible_s]
+            paths = []
+            for possible in possible_s:
+                for path in self.extract_path_better(possible, current_path + [possible], used | set([possible]), start):
+                    paths.append(path)
+                    if path[-1] == start:
+                        return paths
+            return paths       
+        else:
+            return [current_path]
+        
+    def extract_path_no_recurse(self):
+        # go backwards in path but keep track of ties
+        # when there are multiple options, try both paths
+        # at the end, choose the path that ends with s_start
+        parents = {self.s_goal: None}
+        agenda = [self.s_goal]
+        used = {self.s_goal}
+        while agenda:
+            current = agenda.pop(0)
+            if current == self.s_start:
                 break
+            for x in self.get_neighbor(current):
+                if x not in used and not self.is_collision(current, x) and x[0] >= 0 and x[0] < self.x and x[1] >= 0 and x[1] < self.y:
+                    agenda.append(x)
+                    used.add(x)
+                    parents[x] = current
+            agenda.sort(key = lambda x: self.g.get(x))
+        return parents
 
-        return list(reversed(path))
 
     def h(self, s):
         """
@@ -320,10 +414,10 @@ class LparaStar2:
 
 def main():
     s_start = (5, 5)
-    s_goal = (45, 25)
+    s_goal = (45, 45)
 
-    lparastar2 = LparaStar2(s_start, s_goal, 2.5, "euclidean")
-    plot = Plotting(s_start, s_goal)
+    lparastar2 = LparaStar2(s_start, s_goal, 2.5, "euclidean", connected = 4, size = 50, clump_size = 'medium')
+    plot = Plotting(s_start, s_goal, connected = 4, size = 50)
 
     path, visited = lparastar2.searching()
     # plot.animation_lpara_star2(path, visited, "Anytime Repairing A* (ARA*)")

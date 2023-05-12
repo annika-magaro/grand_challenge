@@ -1,9 +1,12 @@
 class Env:
-    def __init__(self):
-        self.x_range = 51  # size of background
-        self.y_range = 31
-        self.motions = [(-1, 0), (-1, 1), (0, 1), (1, 1),
-                        (1, 0), (1, -1), (0, -1), (-1, -1)]
+    def __init__(self, connected=8, size=50, coverage=5, clump_size='small'):
+        self.x_range = size  # size of background
+        self.y_range = size
+        if connected == 8:
+            self.motions = [(-1, 0), (-1, 1), (0, 1), (1, 1),
+                            (1, 0), (1, -1), (0, -1), (-1, -1)]
+        else:
+            self.motions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
         self.obs = self.obs_map()
 
     def update_obs(self, obs):

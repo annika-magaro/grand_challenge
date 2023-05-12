@@ -10,9 +10,9 @@ import env
 
 
 class Plotting:
-    def __init__(self, xI, xG):
+    def __init__(self, xI, xG, connected=8, size=50, coverage=5, clump_size='small'):
         self.xI, self.xG = xI, xG
-        self.env = env.Env()
+        self.env = env.Env(connected, size, coverage, clump_size)
         self.obs = self.env.obs_map()
 
     def update_obs(self, obs):
