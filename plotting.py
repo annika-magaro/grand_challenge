@@ -10,10 +10,10 @@ import env
 
 
 class Plotting:
-    def __init__(self, xI, xG, connected=8, size=50, coverage=5, clump_size='small'):
+    def __init__(self, xI, xG, connected=8, size=50, coverage=0.1, clump_size='small'):
         self.xI, self.xG = xI, xG
         self.env = env.Env(connected, size, coverage, clump_size)
-        self.obs = self.env.obs_map()
+        self.obs = self.env.obs
 
     def update_obs(self, obs):
         self.obs = obs
@@ -84,7 +84,9 @@ class Plotting:
         count = 0
 
         for x in visited:
+            # print(x)
             if x in self.obs:
+                # print("skipping an obstacle in visited")
                 continue
             count += 1
             plt.plot(x[0], x[1], color=cl, marker='s')

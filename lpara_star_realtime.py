@@ -13,24 +13,27 @@ PARAMETERS = {
     "e": 2.5, 
     "connected": 4, 
     "size": 50,
-    "clump-size": "medium"
+    "clump-size": "medium",
+    "coverage": 0.1
 }
 class LparaStar2:
-    def __init__(self, s_start, s_goal, e, heuristic_type, connected=8, size=50, coverage=5, clump_size='small'):
+    def __init__(self, s_start, s_goal, e, heuristic_type, connected=8, size=50, coverage=0.1, clump_size='small'):
         self.s_start, self.s_goal = s_start, s_goal
         self.heuristic_type = heuristic_type
-
-        self.Env = Env(connected = connected, size = size, coverage = coverage, clump_size = clump_size)  
-        self.x = self.Env.x_range
-        self.y = self.Env.y_range
-        self.u_set = self.Env.motions                                       # feasible input set
-        self.obs = self.Env.obs                                             # position of obstacles
+                                               # position of obstacles
         self.e = e
         self.new_env_changes = False
         self.s_changed = set()
         self.connected, self.size, self.coverage, self.clump_size = connected, size, coverage, clump_size
 
-        self.Plot = Plotting(self.s_start, self.s_goal, self.connected, self.size, self.coverage, self.clump_size)  
+        print("create plot")
+        self.Plot = Plotting(self.s_start, self.s_goal, self.connected, self.size, self.coverage, self.clump_size) 
+        print("set env to be env from plot")
+        self.Env = self.Plot.env
+        self.x = self.Env.x_range
+        self.y = self.Env.y_range
+        self.u_set = self.Env.motions                                       # feasible input set
+        self.obs = self.Env.obs   
         self.fig = plt.figure()                                                                                                     # weight
 
         self.colors_visited = Plotting.colors_visited()
@@ -60,7 +63,7 @@ class LparaStar2:
         k = len(self.visited) - 1
         self.Plot.plot_visited(self.visited[k], self.colors_visited[k % len(self.colors_visited)])
         self.Plot.plot_path(self.path[k], self.colors_path[k % len(self.colors_path)], True)
-        self.Plot.plot_obs()
+        # self.Plot.plot_obs()
         plt.pause(0.5) # TODO: increase delay to increase time for user updates
 
     def on_press(self, event):
@@ -79,9 +82,10 @@ class LparaStar2:
                 self.s_changed.add((i, j))
                 plt.plot(i, j, "sk")
         else:
-            self.obs.remove((x, y))
-            self.s_changed.add((x, y))
-            plt.plot(x, y, "sw")
+            for (i, j) in self.get_clump(x, y):
+                self.obs.remove((i, j))
+                self.s_changed.add((i, j))
+                plt.plot(i, j, "sw")
 
         self.Plot.update_obs(self.obs)
 
@@ -161,8 +165,6 @@ class LparaStar2:
 
                 self.s_changed = set()
                 self.new_env_changes = False
-                # print(self.OPEN)
-                # print(self.CalculateKey(self.s_goal))
 
             s, f_small = self.calc_smallest_f()
 
@@ -176,6 +178,8 @@ class LparaStar2:
 
             self.OPEN.pop(s)
             self.CLOSED.add(s)
+            if s in self.obs:
+                continue
 
             for s_n in self.get_neighbor(s):
                 if s_n in self.obs:
@@ -432,6 +436,9 @@ def parse_arguments():
     if "-clump-size" in sys.argv:
         i = sys.argv.index("-clump-size")
         PARAMETERS["clump-size"] = sys.argv[i + 1]
+    if "-coverage" in sys.argv:
+        i = sys.argv.index("-coverage")
+        PARAMETERS["coverage"] = float(sys.argv[i + 1])
 
 def main():
     s_start = (5, 5)
@@ -445,10 +452,9 @@ def main():
         "euclidean", 
         connected = PARAMETERS["connected"], 
         size = PARAMETERS["size"], 
-        clump_size = PARAMETERS["clump-size"]
+        clump_size = PARAMETERS["clump-size"],
+        coverage = PARAMETERS["coverage"]
     )
-
-    plot = Plotting(s_start, s_goal, connected = PARAMETERS["connected"], size = PARAMETERS["size"])
 
     path, visited = lparastar2.searching()
 
