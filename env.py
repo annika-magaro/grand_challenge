@@ -1,9 +1,10 @@
 from obstacles import OBSTACLES
 from random import randint
 class Env:
-    def __init__(self, connected=8, size=50, coverage=0.1, clump_size='small'):
+    def __init__(self, xI, xG, connected=8, size=50, coverage=0.1, clump_size='small'):
         self.x_range = size  # size of background
         self.y_range = size
+        self.xI, self.xG = xI, xG
         if connected == 8:
             self.motions = [(-1, 0), (-1, 1), (0, 1), (1, 1),
                             (1, 0), (1, -1), (0, -1), (-1, -1)]
@@ -19,11 +20,9 @@ class Env:
         Initialize obstacles' positions
         :return: map of obstacles
         """
-        # TODO: ensure that start / goal are not in obstacles
         x = self.x_range
         y = self.y_range
         obs = set()
-
         for i in range(x):
             obs.add((i, 0))
         for i in range(x):
@@ -43,8 +42,10 @@ class Env:
                 if obs_x + dx < x and obs_y + dy < y:
                     obs.add((obs_x + dx, obs_y + dy))
 
-        
-
+        if self.xI in obs:
+            obs.remove(self.xI)
+        if self.xG in obs:
+            obs.remove(self.xG)
         # for i in range(10, 21):
         #     obs.add((i, 15))
         # for i in range(15):
