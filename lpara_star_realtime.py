@@ -26,9 +26,7 @@ class LparaStar2:
         self.s_changed = set()
         self.connected, self.size, self.coverage, self.clump_size = connected, size, coverage, clump_size
 
-        print("create plot")
         self.Plot = Plotting(self.s_start, self.s_goal, self.connected, self.size, self.coverage, self.clump_size) 
-        print("set env to be env from plot")
         self.Env = self.Plot.env
         self.x = self.Env.x_range
         self.y = self.Env.y_range

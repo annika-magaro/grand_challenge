@@ -13,7 +13,7 @@ class AraStar:
         self.s_start, self.s_goal = s_start, s_goal
         self.heuristic_type = heuristic_type
 
-        self.Env = env.Env()                                                # class Env
+        self.Env = env.Env(s_start, s_goal)                                                # class Env
 
         self.u_set = self.Env.motions                                       # feasible input set
         self.obs = self.Env.obs                                             # position of obstacles

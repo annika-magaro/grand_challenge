@@ -15,9 +15,8 @@ class LPAStar:
         self.s_start, self.s_goal = s_start, s_goal
         self.heuristic_type = heuristic_type
 
-        self.Env = env.Env()
         self.Plot = plotting.Plotting(self.s_start, self.s_goal)
-
+        self.Env = self.Plot.env
         self.u_set = self.Env.motions
         self.obs = self.Env.obs
         self.x = self.Env.x_range
