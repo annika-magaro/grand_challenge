@@ -60,6 +60,7 @@ class LparaStar2:
         k = len(self.visited) - 1
         self.Plot.plot_visited(self.visited[k], self.colors_visited[k % len(self.colors_visited)])
         self.Plot.plot_path(self.path[k], self.colors_path[k % len(self.colors_path)], True)
+        self.Plot.plot_obs()
         plt.pause(0.5) # TODO: increase delay to increase time for user updates
 
     def on_press(self, event):

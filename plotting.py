@@ -69,6 +69,11 @@ class Plotting:
         plt.title(name)
         plt.axis("equal")
 
+    def plot_obs(self):
+        obs_x = [x[0] for x in self.obs]
+        obs_y = [x[1] for x in self.obs]
+        plt.plot(obs_x, obs_y, "sk")
+
     def plot_visited(self, visited, cl='gray'):
         if self.xI in visited:
             visited.remove(self.xI)
@@ -82,7 +87,7 @@ class Plotting:
             if x in self.obs:
                 continue
             count += 1
-            plt.plot(x[0], x[1], color=cl, marker='o')
+            plt.plot(x[0], x[1], color=cl, marker='s')
             plt.gcf().canvas.mpl_connect('key_release_event',
                                          lambda event: [exit(0) if event.key == 'escape' else None])
 
