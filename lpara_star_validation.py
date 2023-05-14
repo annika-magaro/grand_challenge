@@ -16,10 +16,11 @@ PARAMETERS = {
     "size": 50,
     "clump-size": "medium",
     "coverage": 0.1,
-    "percent-change": 0.1
+    "percent-change": 0.1,
+    "plot": True
 }
 class LparaStar2:
-    def __init__(self, s_start, s_goal, e, heuristic_type, connected=8, size=50, coverage=0.1, clump_size='small', percent_change=0.1):
+    def __init__(self, s_start, s_goal, e, heuristic_type, connected=8, size=50, coverage=0.1, clump_size='small', percent_change=0.1, plot=True):
         self.s_start, self.s_goal = s_start, s_goal
         self.heuristic_type = heuristic_type
                                                # position of obstacles
@@ -38,7 +39,8 @@ class LparaStar2:
         self.obs_list = []  
         self.clump_dict = {'small': 1, 'medium': 4, 'large': 9} 
         self.total_obstacles = int(self.coverage * self.x * self.y / self.clump_dict[clump_size])  
-        self.num_expanded = 0                                                                                             # weight
+        self.num_expanded = 0  
+        self.plot = plot                                                                                           # weight
 
         self.colors_visited = Plotting.colors_visited()
         self.colors_path = Plotting.colors_path()
@@ -84,13 +86,15 @@ class LparaStar2:
             for (i, j) in self.get_clump(x, y):
                 self.obs.add((i, j))
                 self.s_changed.add((i, j))
-                plt.plot(i, j, "sk")
+                if self.plot:
+                    plt.plot(i, j, "sk")
         else:
             for (i, j) in self.get_clump(x, y):
                 if (i, j) in self.obs:
                     self.obs.remove((i, j))
                     self.s_changed.add((i, j))
-                plt.plot(i, j, "sw")
+                if self.plot:
+                    plt.plot(i, j, "sw")
 
         self.Plot.update_obs(self.obs)
 
@@ -120,10 +124,12 @@ class LparaStar2:
     def searching(self):
         self.init()
         # self.fig.canvas.mpl_connect('button_press_event', self.on_press)
-        self.Plot.plot_grid("LPARA*")
+        if self.plot:
+            self.Plot.plot_grid("LPARA*")
         self.ImprovePath()
         self.path.append(self.extract_path())
-        self.plot_progress()
+        if self.plot:
+            self.plot_progress()
 
         while self.update_e() > 1:  
         # for i in range(3):                                        # continue condition
@@ -136,7 +142,8 @@ class LparaStar2:
             self.change_all_obs(self.percent_change)
             self.ImprovePath()                                    
             self.path.append(self.extract_path())
-            self.plot_progress()
+            if self.plot:
+                self.plot_progress()
 
         return self.path, self.visited, self.num_expanded
 
@@ -418,6 +425,33 @@ def parse_arguments():
     if "-coverage" in sys.argv:
         i = sys.argv.index("-coverage")
         PARAMETERS["coverage"] = float(sys.argv[i + 1])
+    if "-percent-change" in sys.argv:
+        i = sys.argv.index("-percent-change")
+        PARAMETERS["percent-change"] = float(sys.argv[i + 1])
+    if "-plot" in sys.argv:
+        i = sys.argv.index("-plot")
+        PARAMETERS["plot"] = eval(sys.argv[i + 1])
+
+def validate(epsilon, connected, size, clump_size, coverage, percent_change, num_rounds=1000):
+    s_start = (5, 5)
+    s_goal = (size - 5, size - 5)
+    avg_expansion = 0
+    for i in range(num_rounds):
+        lparastar2 = LparaStar2(
+            s_start, 
+            s_goal, 
+            epsilon, 
+            "euclidean", 
+            connected = connected, 
+            size = size, 
+            clump_size = clump_size,
+            coverage = coverage,
+            percent_change = percent_change,
+            plot = False
+        )
+        path, visited, num_expanded = lparastar2.searching()
+        avg_expansion += num_expanded / num_rounds
+    return avg_expansion
 
 def main():
     s_start = (5, 5)
@@ -433,7 +467,8 @@ def main():
         size = PARAMETERS["size"], 
         clump_size = PARAMETERS["clump-size"],
         coverage = PARAMETERS["coverage"],
-        percent_change = PARAMETERS["percent-change"]
+        percent_change = PARAMETERS["percent-change"],
+        plot = PARAMETERS["plot"]
     )
 
     path, visited, num_expanded = lparastar2.searching()
