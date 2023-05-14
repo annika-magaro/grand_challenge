@@ -15,17 +15,18 @@ PARAMETERS = {
     "connected": 4, 
     "size": 50,
     "clump-size": "medium",
-    "coverage": 0.1
+    "coverage": 0.1,
+    "percent-change": 0.1
 }
 class LparaStar2:
-    def __init__(self, s_start, s_goal, e, heuristic_type, connected=8, size=50, coverage=0.1, clump_size='small'):
+    def __init__(self, s_start, s_goal, e, heuristic_type, connected=8, size=50, coverage=0.1, clump_size='small', percent_change=0.1):
         self.s_start, self.s_goal = s_start, s_goal
         self.heuristic_type = heuristic_type
                                                # position of obstacles
         self.e = e
         self.new_env_changes = False
         self.s_changed = set()
-        self.connected, self.size, self.coverage, self.clump_size = connected, size, coverage, clump_size
+        self.connected, self.size, self.coverage, self.clump_size, self.percent_change = connected, size, coverage, clump_size, percent_change
 
         self.Plot = Plotting(self.s_start, self.s_goal, self.connected, self.size, self.coverage, self.clump_size) 
         self.Env = self.Plot.env
@@ -36,7 +37,8 @@ class LparaStar2:
         self.fig = plt.figure()
         self.obs_list = []  
         self.clump_dict = {'small': 1, 'medium': 4, 'large': 9} 
-        self.total_obstacles = int(self.coverage * self.x * self.y / self.clump_dict[clump_size])                                                                                               # weight
+        self.total_obstacles = int(self.coverage * self.x * self.y / self.clump_dict[clump_size])  
+        self.num_expanded = 0                                                                                             # weight
 
         self.colors_visited = Plotting.colors_visited()
         self.colors_path = Plotting.colors_path()
@@ -107,9 +109,7 @@ class LparaStar2:
                 self.change_obs(obs[0], obs[1])
             else:
                 new_obs_list.append(obs)
-        print(len(self.obs_list))
         obs_to_add = self.total_obstacles - len(self.obs_list)
-        print('num_obs_to_add', obs_to_add)
         self.obs_list = new_obs_list
         for i in range(int(obs_to_add)):
             x = random.randint(self.s_start[0] + 1, self.s_goal[0] - 1)
@@ -133,12 +133,12 @@ class LparaStar2:
 
             self.INCONS = dict()
             self.CLOSED = set()
-            self.change_all_obs(0.1)
+            self.change_all_obs(self.percent_change)
             self.ImprovePath()                                    
             self.path.append(self.extract_path())
             self.plot_progress()
 
-        return self.path, self.visited
+        return self.path, self.visited, self.num_expanded
 
     def UpdateVertex(self, s):
         """
@@ -179,9 +179,11 @@ class LparaStar2:
                 # Modify previously calculated path to avoid it?? 
                 for s in self.s_changed:
                     self.UpdateVertex(s)
+                    self.num_expanded += 1
                 
                     for s_n in self.get_neighbor(s):
                         self.UpdateVertex(s_n)
+                        self.num_expanded += 1
 
                 self.s_changed = set()
                 self.new_env_changes = False
@@ -211,6 +213,7 @@ class LparaStar2:
                     self.g[s_n] = new_cost
                     self.PARENT[s_n] = s
                     visited_each.append(s_n)
+                    self.num_expanded += 1
 
                     if s_n not in self.CLOSED:
                         self.OPEN[s_n] = self.f_value(s_n)
@@ -290,7 +293,6 @@ class LparaStar2:
         """
         
         parents = self.extract_path_no_recurse()
-        print(parents)
         path = []
         current = self.s_start
         while current is not None:
@@ -430,12 +432,14 @@ def main():
         connected = PARAMETERS["connected"], 
         size = PARAMETERS["size"], 
         clump_size = PARAMETERS["clump-size"],
-        coverage = PARAMETERS["coverage"]
+        coverage = PARAMETERS["coverage"],
+        percent_change = PARAMETERS["percent-change"]
     )
 
-    path, visited = lparastar2.searching()
+    path, visited, num_expanded = lparastar2.searching()
 
     print("Arguments: ", sys.argv)
+    print("number of states expanded: " + str(num_expanded))
 
 if __name__ == '__main__':
     main()
