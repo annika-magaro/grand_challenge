@@ -2,6 +2,8 @@ import os
 import sys
 import math
 import random
+import json
+import time
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) +
                 "/../../Search_based_Planning/")
@@ -77,7 +79,7 @@ class LparaStar2:
             print("Please choose right area!")
         else:
             x, y = int(x), int(y)
-            print("Change position: s =", x, ",", "y =", y)
+            # print("Change position: s =", x, ",", "y =", y)
             self.new_env_changes = True
 
         if (x, y) not in self.obs:
@@ -181,7 +183,7 @@ class LparaStar2:
 
         while True and len(self.OPEN) != 0:
             if self.new_env_changes:
-                print("NEW ENV CHANGES")
+                # print("NEW ENV CHANGES")
                 # TODO: MAKE EDGES CONSISTENT HERE BY CALLING LPA* ALGO
                 # Modify previously calculated path to avoid it?? 
                 for s in self.s_changed:
@@ -198,7 +200,7 @@ class LparaStar2:
             s, f_small = self.calc_smallest_f()
 
             if self.f_value(self.s_goal) <= f_small:
-                print("break")
+                # print("break")
                 break
             # if self.CalculateKey(self.s_goal) <= self.CalculateKey(s):
             #     print("break")
@@ -435,6 +437,7 @@ def parse_arguments():
 def validate(epsilon, connected, size, clump_size, coverage, percent_change, num_rounds=1000):
     s_start = (5, 5)
     s_goal = (size - 5, size - 5)
+    successes = num_rounds
     avg_expansion = 0
     for i in range(num_rounds):
         lparastar2 = LparaStar2(
@@ -449,32 +452,63 @@ def validate(epsilon, connected, size, clump_size, coverage, percent_change, num
             percent_change = percent_change,
             plot = False
         )
-        path, visited, num_expanded = lparastar2.searching()
-        avg_expansion += num_expanded / num_rounds
-    return avg_expansion
+        try: 
+            path, visited, num_expanded = lparastar2.searching()
+            avg_expansion += num_expanded
+        except: 
+            successes -= 1
+    return avg_expansion / successes
+
+connected = [4, 8]
+size = [30, 50, 100]
+clump_size = ['small', 'medium', 'large']
+coverage = [0.05, 0.1, 0.2]
+percent_change = [0.05, 0.1, 0.2]
 
 def main():
-    s_start = (5, 5)
-    s_goal = (45, 45)
+    # s_start = (5, 5)
+    # s_goal = (45, 45)
 
-    args = parse_arguments()
-    lparastar2 = LparaStar2(
-        s_start, 
-        s_goal, 
-        PARAMETERS["e"], 
-        "euclidean", 
-        connected = PARAMETERS["connected"], 
-        size = PARAMETERS["size"], 
-        clump_size = PARAMETERS["clump-size"],
-        coverage = PARAMETERS["coverage"],
-        percent_change = PARAMETERS["percent-change"],
-        plot = PARAMETERS["plot"]
-    )
+    # args = parse_arguments()
+    # lparastar2 = LparaStar2(
+    #     s_start, 
+    #     s_goal, 
+    #     PARAMETERS["e"], 
+    #     "euclidean", 
+    #     connected = PARAMETERS["connected"], 
+    #     size = PARAMETERS["size"], 
+    #     clump_size = PARAMETERS["clump-size"],
+    #     coverage = PARAMETERS["coverage"],
+    #     percent_change = PARAMETERS["percent-change"],
+    #     plot = PARAMETERS["plot"]
+    # )
 
-    path, visited, num_expanded = lparastar2.searching()
+    # path, visited, num_expanded = lparastar2.searching()
 
-    print("Arguments: ", sys.argv)
-    print("number of states expanded: " + str(num_expanded))
+    # print("Arguments: ", sys.argv)
+    # print("number of states expanded: " + str(num_expanded))
+
+    connecteds = [4, 8]
+    sizes = [30, 50, 100]
+    clump_sizes = ['small', 'medium', 'large']
+    coverages = [0.05, 0.1, 0.2]
+    percent_changes = [0.05, 0.1, 0.2] 
+    validation_stats = [] 
+    for connected in connecteds:
+        for size in sizes:
+            for clump_size in clump_sizes:
+                for coverage in coverages:
+                    for percent_change in percent_changes:
+                        validation = validate(2.5, connected, size, clump_size, coverage, percent_change, 100)
+                        print(validation)
+                        validation_stats.append({'connected': connected, 
+                                                 'size': size, 
+                                                 'clump_size': clump_size, 
+                                                 'coverage': coverage,
+                                                 'percent_change': percent_change,
+                                                 'avg_states_expanded': validation})
+    print(validation_stats)
+    json.dump(validation_stats, open('validation_stats.json', 'w'))
 
 if __name__ == '__main__':
     main()
