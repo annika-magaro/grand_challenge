@@ -21,7 +21,7 @@ PARAMETERS = {
     "percent-change": 0.1,
     "plot": True
 }
-class LparaStar2:
+class LparaStar:
     def __init__(self, s_start, s_goal, e, heuristic_type, connected=8, size=50, coverage=0.1, clump_size='small', percent_change=0.1, plot=True):
         self.s_start, self.s_goal = s_start, s_goal
         self.heuristic_type = heuristic_type
@@ -441,7 +441,7 @@ def validate(epsilon, connected, size, clump_size, coverage, percent_change, num
     successes = num_rounds
     avg_expansion = 0
     for i in range(num_rounds):
-        lparastar2 = LparaStar2(
+        lparastar = LparaStar(
             s_start, 
             s_goal, 
             epsilon, 
@@ -454,7 +454,7 @@ def validate(epsilon, connected, size, clump_size, coverage, percent_change, num
             plot = False
         )
         try: 
-            path, visited, num_expanded = lparastar2.searching()
+            path, visited, num_expanded = lparastar.searching()
             avg_expansion += num_expanded
         except: 
             successes -= 1

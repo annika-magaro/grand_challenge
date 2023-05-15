@@ -16,11 +16,11 @@ PARAMETERS = {
     "clump-size": "medium",
     "coverage": 0.1
 }
-class LparaStar2:
+class LparaStar:
     def __init__(self, s_start, s_goal, e, heuristic_type, connected=8, size=50, coverage=0.1, clump_size='small'):
         self.s_start, self.s_goal = s_start, s_goal
         self.heuristic_type = heuristic_type
-                                               # position of obstacles
+
         self.e = e
         self.new_env_changes = False
         self.s_changed = set()
@@ -32,7 +32,7 @@ class LparaStar2:
         self.y = self.Env.y_range
         self.u_set = self.Env.motions                                       # feasible input set
         self.obs = self.Env.obs   
-        self.fig = plt.figure()                                                                                                     # weight
+        self.fig = plt.figure()                                                                                          
 
         self.colors_visited = Plotting.colors_visited()
         self.colors_path = Plotting.colors_path()
@@ -61,8 +61,7 @@ class LparaStar2:
         k = len(self.visited) - 1
         self.Plot.plot_visited(self.visited[k], self.colors_visited[k % len(self.colors_visited)])
         self.Plot.plot_path(self.path[k], self.colors_path[k % len(self.colors_path)], True)
-        # self.Plot.plot_obs()
-        plt.pause(0.5) # TODO: increase delay to increase time for user updates
+        plt.pause(0.5) 
 
     def on_press(self, event):
         x, y = event.xdata, event.ydata
@@ -74,7 +73,6 @@ class LparaStar2:
             self.new_env_changes = True
 
         if (x, y) not in self.obs:
-            # TODO: make sure that obstacles are reflecting in determined paths
             for (i, j) in self.get_clump(x, y):
                 self.obs.add((i, j))
                 self.s_changed.add((i, j))
@@ -106,7 +104,7 @@ class LparaStar2:
 
         while self.update_e() > 1:  
         # for i in range(3):                                        # continue condition
-            self.e -= 0.1 # TODO: interesting to experiment with changing this value                                               # increase weight
+            self.e -= 0.1 
             self.OPEN.update(self.INCONS)
             self.OPEN = {s: self.f_value(s) for s in self.OPEN}             # update f_value of OPEN set
 
@@ -152,9 +150,6 @@ class LparaStar2:
 
         while True and len(self.OPEN) != 0:
             if self.new_env_changes:
-                print("NEW ENV CHANGES")
-                # TODO: MAKE EDGES CONSISTENT HERE BY CALLING LPA* ALGO
-                # Modify previously calculated path to avoid it?? 
                 for s in self.s_changed:
                     self.UpdateVertex(s)
                 
@@ -167,11 +162,7 @@ class LparaStar2:
             s, f_small = self.calc_smallest_f()
 
             if self.f_value(self.s_goal) <= f_small:
-                print("break")
                 break
-            # if self.CalculateKey(self.s_goal) <= self.CalculateKey(s):
-            #     print("break")
-            #     break
 
 
             self.OPEN.pop(s)
@@ -243,74 +234,11 @@ class LparaStar2:
         return min(self.g[s_n] + self.cost(s_n, s)
                 for s_n in self.get_neighbor(s))
 
-    # def extract_path(self):
-    #     """
-    #     Extract the path based on the PARENT set.
-    #     :return: The planning path
-    #     """
-
-    #     path = [self.s_goal]
-    #     s = self.s_goal
-
-    #     while True:
-    #         s = self.PARENT[s]
-    #         path.append(s)
-
-    #         if s == self.s_start:
-    #             break
-
-    #     return list(path)
-
     def extract_path(self):
         """
         Extract the path based on the PARENT set.
         :return: The planning path
         """
-
-        # path = [self.s_goal]
-        # s = self.s_goal
-        # print(s)
-        # for k in range(100):
-        #     g_list = {}
-        #     for x in self.get_neighbor(s):
-        #         # TODO: maybe this is a hack? i'm not sure...
-        #         # using calculate key instead of this could fix this perhaps?
-        #         if not self.is_collision(s, x) and x not in path:
-        #             print(x)
-        #             g_list[x] = self.g[x]
-        #     s = min(g_list, key=g_list.get)
-        #     path.append(s)
-        #     if s == self.s_start:
-        #         break
-
-        # return list(reversed(path))
-    
-        # path = [self.s_goal]
-        # s = self.s_goal
-        # used = set(s)
-        # print(self.g)
-        # for k in range(100):
-        #     g_list = {}
-        #     for x in self.get_neighbor(s):
-        #         #if not self.is_collision(s, x):
-        #         if x not in used and x[0] >= 0 and x[0] < self.x and x[1] >= 0 and x[1] < self.y:
-        #             g_list[x] = self.g[x]
-        #     s = min(g_list, key=g_list.get)
-        #     if s in path:
-        #         used.add(path[-1])
-        #     path.append(s)
-        #     print(path)
-        #     if s == self.s_start:
-        #         break
-        # print(list(reversed(path)))
-
-        # return list(reversed(path))
-
-        # possible_paths = self.extract_path_better(self.s_goal, [self.s_goal], set([self.s_goal]), self.s_start)
-        # for i in possible_paths:
-        #     if i[-1] == self.s_start:
-        #         return list(reversed(i))
-        # return []
         parents = self.extract_path_no_recurse()
         path = []
         current = self.s_start
@@ -420,7 +348,6 @@ class LparaStar2:
 
         return False
 
-# TODO: raise exception if invalid input
 def parse_arguments():
     if "-e" in sys.argv:
         i = sys.argv.index("-e")
@@ -443,7 +370,7 @@ def main():
     s_goal = (45, 45)
 
     args = parse_arguments()
-    lparastar2 = LparaStar2(
+    lparastar = LparaStar(
         s_start, 
         s_goal, 
         PARAMETERS["e"], 
@@ -454,7 +381,7 @@ def main():
         coverage = PARAMETERS["coverage"]
     )
 
-    path, visited = lparastar2.searching()
+    path, visited = lparastar.searching()
 
     print("Arguments: ", sys.argv)
 
