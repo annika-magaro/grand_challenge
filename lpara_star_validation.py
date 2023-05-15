@@ -133,8 +133,9 @@ class LparaStar2:
         if self.plot:
             self.plot_progress()
 
-        while self.update_e() > 1:  
-        # for i in range(3):                                        # continue condition
+        while self.e > 1:  
+        # for i in range(3):      
+            # print(self.num_expanded)                                  # continue condition
             self.e -= 0.1 # TODO: interesting to experiment with changing this value                                               # increase weight
             self.OPEN.update(self.INCONS)
             self.OPEN = {s: self.f_value(s) for s in self.OPEN}             # update f_value of OPEN set
@@ -488,7 +489,7 @@ def main():
     # print("Arguments: ", sys.argv)
     # print("number of states expanded: " + str(num_expanded))
 
-    connecteds = [4, 8]
+    connecteds = [8]
     sizes = [30, 50, 100]
     clump_sizes = ['small', 'medium', 'large']
     coverages = [0.05, 0.1, 0.2]
@@ -508,7 +509,7 @@ def main():
                                                  'percent_change': percent_change,
                                                  'avg_states_expanded': validation})
     print(validation_stats)
-    json.dump(validation_stats, open('validation_stats.json', 'w'))
+    json.dump(validation_stats, open('validation_stats_8connected.json', 'w'))
 
 if __name__ == '__main__':
     main()
