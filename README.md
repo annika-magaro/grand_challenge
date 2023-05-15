@@ -80,12 +80,12 @@ python3 ./lpara_star_realtime.py -connected 8 -size 50 -clump-size  large -cover
 A window should pop up with the demonstration. Obstacles can be added by clicking on the grid.
 
 ## Demo
-[LPARA* Demo with Small Obstacles](https://youtu.be/-YL-jlHuD-k)
-[LPARA* Demo with Large Obstacles]((https://youtu.be/hmiuN_hZIZk)
+* [LPARA* Demo with Small Obstacles](https://youtu.be/-YL-jlHuD-k)
+* [LPARA* Demo with Large Obstacles](https://youtu.be/hmiuN_hZIZk)
 
-[LPA* Validation Test Example](https://youtu.be/xlyuO17h2rM)
-[ARA* Validation Test Example](https://youtu.be/A1dI_yH-PQI)
-[LPARA* Validation Test Example](https://youtu.be/GEfqqgrk-Fo)
+* [LPA* Validation Test Example](https://youtu.be/xlyuO17h2rM)
+* [ARA* Validation Test Example](https://youtu.be/A1dI_yH-PQI)
+* [LPARA* Validation Test Example](https://youtu.be/GEfqqgrk-Fo)
 
 
 
