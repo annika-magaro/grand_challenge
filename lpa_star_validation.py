@@ -26,7 +26,7 @@ class LparaStar2:
         self.s_start, self.s_goal = s_start, s_goal
         self.heuristic_type = heuristic_type
                                                # position of obstacles
-        self.e = e
+        self.e = 1
         self.new_env_changes = False
         self.s_changed = set()
         self.connected, self.size, self.coverage, self.clump_size, self.percent_change = connected, size, coverage, clump_size, percent_change
@@ -133,10 +133,10 @@ class LparaStar2:
         if self.plot:
             self.plot_progress()
 
-        while self.e > 1:  
-        # for i in range(3):      
-            # print(self.num_expanded)                                  # continue condition
-            self.e -= 0.1 # TODO: interesting to experiment with changing this value                                               # increase weight
+        for i in range(15): 
+            print(self.num_expanded) 
+        # for i in range(3):                                        # continue condition
+            # self.e -= 0.1 # TODO: interesting to experiment with changing this value                                               # increase weight
             self.OPEN.update(self.INCONS)
             self.OPEN = {s: self.f_value(s) for s in self.OPEN}             # update f_value of OPEN set
 
@@ -467,49 +467,49 @@ coverage = [0.05, 0.1, 0.2]
 percent_change = [0.05, 0.1, 0.2]
 
 def main():
-    # s_start = (5, 5)
-    # s_goal = (45, 45)
+    s_start = (5, 5)
+    s_goal = (45, 45)
 
-    # args = parse_arguments()
-    # lparastar2 = LparaStar2(
-    #     s_start, 
-    #     s_goal, 
-    #     PARAMETERS["e"], 
-    #     "euclidean", 
-    #     connected = PARAMETERS["connected"], 
-    #     size = PARAMETERS["size"], 
-    #     clump_size = PARAMETERS["clump-size"],
-    #     coverage = PARAMETERS["coverage"],
-    #     percent_change = PARAMETERS["percent-change"],
-    #     plot = PARAMETERS["plot"]
-    # )
+    args = parse_arguments()
+    lparastar2 = LparaStar2(
+        s_start, 
+        s_goal, 
+        PARAMETERS["e"], 
+        "euclidean", 
+        connected = PARAMETERS["connected"], 
+        size = PARAMETERS["size"], 
+        clump_size = PARAMETERS["clump-size"],
+        coverage = PARAMETERS["coverage"],
+        percent_change = PARAMETERS["percent-change"],
+        plot = PARAMETERS["plot"]
+    )
 
-    # path, visited, num_expanded = lparastar2.searching()
+    path, visited, num_expanded = lparastar2.searching()
 
-    # print("Arguments: ", sys.argv)
-    # print("number of states expanded: " + str(num_expanded))
+    print("Arguments: ", sys.argv)
+    print("number of states expanded: " + str(num_expanded))
 
-    connecteds = [8]
-    sizes = [30, 50, 100]
-    clump_sizes = ['small', 'medium', 'large']
-    coverages = [0.05, 0.1, 0.2]
-    percent_changes = [0.05, 0.1, 0.2] 
-    validation_stats = [] 
-    for connected in connecteds:
-        for size in sizes:
-            for clump_size in clump_sizes:
-                for coverage in coverages:
-                    for percent_change in percent_changes:
-                        validation = validate(2.5, connected, size, clump_size, coverage, percent_change, 100)
-                        print(validation)
-                        validation_stats.append({'connected': connected, 
-                                                 'size': size, 
-                                                 'clump_size': clump_size, 
-                                                 'coverage': coverage,
-                                                 'percent_change': percent_change,
-                                                 'avg_states_expanded': validation})
-    print(validation_stats)
-    json.dump(validation_stats, open('validation_stats_8connected.json', 'w'))
+    # connecteds = [4, 8]
+    # sizes = [30, 50, 100]
+    # clump_sizes = ['small', 'medium', 'large']
+    # coverages = [0.05, 0.1, 0.2]
+    # percent_changes = [0.05, 0.1, 0.2] 
+    # validation_stats = [] 
+    # for connected in connecteds:
+    #     for size in sizes:
+    #         for clump_size in clump_sizes:
+    #             for coverage in coverages:
+    #                 for percent_change in percent_changes:
+    #                     validation = validate(2.5, connected, size, clump_size, coverage, percent_change, 100)
+    #                     print(validation)
+    #                     validation_stats.append({'connected': connected, 
+    #                                              'size': size, 
+    #                                              'clump_size': clump_size, 
+    #                                              'coverage': coverage,
+    #                                              'percent_change': percent_change,
+    #                                              'avg_states_expanded': validation})
+    # print(validation_stats)
+    # json.dump(validation_stats, open('validation_stats_lpa_star.json', 'w'))
 
 if __name__ == '__main__':
     main()
