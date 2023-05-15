@@ -509,7 +509,7 @@ def main():
                                                  'percent_change': percent_change,
                                                  'avg_states_expanded': validation})
     print(validation_stats)
-    json.dump(validation_stats, open('validation_stats_8connected.json', 'w'))
+    json.dump(validation_stats, open('data/validation_stats_8connected.json', 'w'))
 
 if __name__ == '__main__':
     main()
