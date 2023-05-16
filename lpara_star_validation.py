@@ -278,24 +278,6 @@ class LparaStar:
         return min(self.g[s_n] + self.cost(s_n, s)
                 for s_n in self.get_neighbor(s))
 
-    # def extract_path(self):
-    #     """
-    #     Extract the path based on the PARENT set.
-    #     :return: The planning path
-    #     """
-
-    #     path = [self.s_goal]
-    #     s = self.s_goal
-
-    #     while True:
-    #         s = self.PARENT[s]
-    #         path.append(s)
-
-    #         if s == self.s_start:
-    #             break
-
-    #     return list(path)
-
     def extract_path(self):
         """
         Extract the path based on the PARENT set.
@@ -460,36 +442,8 @@ def validate(epsilon, connected, size, clump_size, coverage, percent_change, num
             successes -= 1
     return avg_expansion / successes
 
-connected = [4, 8]
-size = [30, 50, 100]
-clump_size = ['small', 'medium', 'large']
-coverage = [0.05, 0.1, 0.2]
-percent_change = [0.05, 0.1, 0.2]
-
-def main():
-    # s_start = (5, 5)
-    # s_goal = (45, 45)
-
-    # args = parse_arguments()
-    # lparastar2 = LparaStar2(
-    #     s_start, 
-    #     s_goal, 
-    #     PARAMETERS["e"], 
-    #     "euclidean", 
-    #     connected = PARAMETERS["connected"], 
-    #     size = PARAMETERS["size"], 
-    #     clump_size = PARAMETERS["clump-size"],
-    #     coverage = PARAMETERS["coverage"],
-    #     percent_change = PARAMETERS["percent-change"],
-    #     plot = PARAMETERS["plot"]
-    # )
-
-    # path, visited, num_expanded = lparastar2.searching()
-
-    # print("Arguments: ", sys.argv)
-    # print("number of states expanded: " + str(num_expanded))
-
-    connecteds = [8]
+def validate_all():
+    connecteds = [4, 8]
     sizes = [30, 50, 100]
     clump_sizes = ['small', 'medium', 'large']
     coverages = [0.05, 0.1, 0.2]
@@ -509,7 +463,30 @@ def main():
                                                  'percent_change': percent_change,
                                                  'avg_states_expanded': validation})
     print(validation_stats)
-    json.dump(validation_stats, open('data/validation_stats_8connected.json', 'w'))
+    json.dump(validation_stats, open('data/validation_stats.json', 'w'))
+
+def main():
+    s_start = (5, 5)
+    s_goal = (45, 45)
+
+    args = parse_arguments()
+    lparastar2 = LparaStar(
+        s_start, 
+        s_goal, 
+        PARAMETERS["e"], 
+        "euclidean", 
+        connected = PARAMETERS["connected"], 
+        size = PARAMETERS["size"], 
+        clump_size = PARAMETERS["clump-size"],
+        coverage = PARAMETERS["coverage"],
+        percent_change = PARAMETERS["percent-change"],
+        plot = PARAMETERS["plot"]
+    )
+
+    path, visited, num_expanded = lparastar2.searching()
+
+    print("Arguments: ", sys.argv)
+    print("number of states expanded: " + str(num_expanded))
 
 if __name__ == '__main__':
     main()
