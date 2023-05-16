@@ -1,4 +1,11 @@
 import json
+import matplotlib.pyplot as plt
+
+METRICS = {'connected': [4, 8], 
+           'size': [30, 50, 100], 
+           'clump_size': ['small', 'medium', 'large'], 
+           'coverage': [0.05, 0.1, 0.2],
+           'percent_change': [0.05, 0.1, 0.2]}
 
 def compare_ratios(lpa_star_results, lpara_star_results):
     ratios = []
@@ -21,6 +28,15 @@ def compare_ratios(lpa_star_results, lpara_star_results):
     avg_ratio = sum([i['ratio'] for i in ratios]) / len(ratios)
     return ratios, avg_ratio
 
+def get_breakdown_by_metric(ratios, metric):
+    buckets = {}
+    for stat in ratios:
+        value = stat[metric]
+        buckets[value] = buckets.get(value, []) + [stat['ratio']]
+    for key in buckets:
+        buckets[key] = sum(buckets[key]) / len(buckets[key])
+    return buckets
+
 def main():
     with open('data/validation_stats_lpa_star.json', 'r') as f:
         lpa_star_results = json.load(f)
@@ -33,7 +49,17 @@ def main():
 
     lpara_star_results = lpara_star_results[:len(lpara_star_results) // 2] + lpara_star_results8
     ratios, avg_ratio = compare_ratios(lpa_star_results, lpara_star_results)
+    print(avg_ratio)
     json.dump(ratios, open('data/validation_ratios.json', 'w'))
+    for metric in METRICS:
+        stats = get_breakdown_by_metric(ratios, metric)
+        print(metric, stats)
+        plt.plot(list(stats.keys()), list(stats.values()))
+        plt.title(metric)
+        plt.ylim(0, 1)
+        plt.xlabel('condition')
+        plt.ylabel('ratio of LPARA* to LPA* expanded states')
+        plt.show()
 
 if __name__ == '__main__':
     main()
