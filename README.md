@@ -67,6 +67,14 @@ The obstacles in the gridworld are randomly generated based on the specified cov
 | -clump-size | _"small", "medium", or "large"_ Size of obstacles that are dynamically placed by user.                                                                                                    | medium  |
 | -coverage   | _float >= 0 and <= 0.5_ : Percentage of gridworld covered by an obstacle.                                                                                                                 | 0.1     |     
 
+## Evaluation
+In order to evaluate performance of LPARA*, we created an automated version of LPARA*. This does not support user clicks but instead changes the obstacles in the grid by some amount after each call to ImprovePath(). Evaluation introduces two new flags.
+
+| Flag        | Description                                                                                                                                                                               | Default |
+|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| -percent-change          | _float >= 0 and <= 0.5_  : Percent of obstacles to remove/add each round. Higher values will lead to a more dynamic gridworld.                                                       | 0.1     |
+| -plot  | _True or False_ : Whether to include plots | True       |
+
 ## Usage
 A demonstration of the LPARA* algorithm can be run using the following setup:
 ```
@@ -78,6 +86,12 @@ The parameters can be configured as follows, in any order. Any parameter that is
 python3 ./lpara_star_realtime.py -connected 8 -size 50 -clump-size  large -coverage 0.2
 ```
 A window should pop up with the demonstration. Obstacles can be added by clicking on the grid.
+
+If a user wishes to use the automated setup, they can run the following (example parameters provided):
+```
+python3 ./lpara_star_validation.py -connected 4 -size 30 -clump-size medium -coverage 0.05 -percent-change 0.1 -plot True
+```
+A window will pop up with a demonstration if plot is set to True. After it is done, it will return the number of states expanded.
 
 ## Demo
 * [LPARA* Demo with Small Obstacles](https://youtu.be/-YL-jlHuD-k)
