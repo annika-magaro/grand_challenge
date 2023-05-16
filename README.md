@@ -93,6 +93,8 @@ python3 ./lpara_star_validation.py -connected 4 -size 30 -clump-size medium -cov
 ```
 A window will pop up with a demonstration if plot is set to True. After it is done, it will return the number of states expanded.
 
+To run evaluation, users can run the validate_all() function in lpara_star_validation.py.
+
 ## Demo
 * [LPARA* Demo with Small Obstacles](https://youtu.be/-YL-jlHuD-k)
 * [LPARA* Demo with Large Obstacles](https://youtu.be/hmiuN_hZIZk)
